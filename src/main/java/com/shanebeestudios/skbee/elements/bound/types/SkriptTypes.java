@@ -75,13 +75,15 @@ public class SkriptTypes {
 
                     @SuppressWarnings("NullableProblems")
                     @Override
+                    // TODO re-enable this deserialization
                     protected Bound deserialize(Fields fields) throws StreamCorruptedException {
-                        String boundID = fields.getObject("boundID", String.class);
-                        Bound bound = SkBee.getPlugin().getBoundConfig().getBoundFromID(boundID);
-                        if (bound == null) {
-                            throw new StreamCorruptedException("Unable to find bound with id '" + boundID + "'");
-                        }
-                        return bound;
+//                        String boundID = fields.getObject("boundID", String.class);
+//                        Bound bound = SkBee.getPlugin().getBoundConfig().getBoundFromID(boundID);
+//                        if (bound == null) {
+//                            throw new StreamCorruptedException("Unable to find bound with id '" + boundID + "'");
+//                        }
+//                        return bound;
+                        return null;
                     }
 
                     @Override

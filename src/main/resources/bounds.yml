@@ -1,9 +1,17 @@
-# This file will save all bounds
+# This file saves all bounds created in the server.
 
-# Checks if old bound height needs to be changed
-# This is used internally and can be ignored
-# This value should not be changed manually
+# - - !! FOR INTERNAL USE ONLY !! - -
+
+# These values are for internal uses and can be safely ignored.
+# You are advised to not change any of these.
+
+# Checks if old bounds height has been updated
 updated_18_heights: true
 
-# A list of all bounds
+# Checks if old bounds serialization has been updated to support the per world id update
+updated_per_world_bound_ids: true
+
+# - - !! FOR INTERNAL USE ONLY !! - -
+
+# The list of bounds
 bounds:

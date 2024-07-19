@@ -61,7 +61,7 @@ public class ExprBoundID extends SimplePropertyExpression<Bound, String> {
         if (bound == null) return;
 
         BoundConfig boundConfig = SkBee.getPlugin().getBoundConfig();
-        if (boundConfig.boundExists(id)) {
+        if (boundConfig.boundExists(id, bound.getWorldName())) {
             // We don't want to rename a bound if the name already exists
             Util.skriptError("Bound with ID '%s' already exists, you can not rename bound with id '%s' to that.", id, bound.getId());
             return;

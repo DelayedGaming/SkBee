@@ -41,7 +41,7 @@ public class ExprLastCreatedBound extends SimpleExpression<Bound> {
     @Override
     protected @Nullable Bound[] get(Event event) {
         if (lastCreated == null) return null;
-        if (!boundConfig.boundExists(lastCreated.getId())) {
+        if (!boundConfig.boundExists(lastCreated.getId(), lastCreated.getWorldName())) {
             lastCreated = null;
             return null;
         }

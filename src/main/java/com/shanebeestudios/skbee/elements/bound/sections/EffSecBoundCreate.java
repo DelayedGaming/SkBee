@@ -86,12 +86,6 @@ public class EffSecBoundCreate extends EffectSection {
         String id = this.boundID.getSingle(event);
         if (id == null) return super.walk(event, false);
 
-
-        if (boundConfig.boundExists(id)) {
-            Util.skriptError("&cBound with id '%s' already exists, cannot overwrite!", id);
-            return super.walk(event, false);
-        }
-
         Location lesser = this.loc1.getSingle(event);
         Location greater = this.loc2.getSingle(event);
         if (lesser == null || greater == null) return super.walk(event, false);
@@ -100,6 +94,11 @@ public class EffSecBoundCreate extends EffectSection {
         World worldL = lesser.getWorld();
         World worldG = greater.getWorld();
         if (worldL == null || worldG == null) return super.walk(event, false);
+
+        if (boundConfig.boundExists(id, worldL.getName())) {
+            Util.skriptError("&cBound with id '%s' already exists, cannot overwrite!", id);
+            return super.walk(event, false);
+        }
 
         if (worldL != worldG) {
             String l = Classes.toString(worldL);
