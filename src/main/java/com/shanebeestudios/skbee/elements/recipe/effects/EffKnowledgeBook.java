@@ -11,6 +11,7 @@ import ch.njol.skript.lang.Expression;
 import ch.njol.skript.lang.SkriptParser.ParseResult;
 import ch.njol.util.Kleenean;
 import com.shanebeestudios.skbee.api.recipe.RecipeUtil;
+import com.shanebeestudios.skbee.api.util.Util;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -35,8 +36,8 @@ public class EffKnowledgeBook extends Effect {
 
     static {
         Skript.registerEffect(EffKnowledgeBook.class,
-                "add [(custom|1¦(mc|minecraft))] recipe[s] [with id[s]] %strings% [from plugin %-string%] to %itemtype%",
-                "remove [(custom|1¦(mc|minecraft))] recipe[s] [with id[s]] %strings% [from plugin %-string%] from %itemtype%");
+                "add [(custom|1:(mc|minecraft))] recipe[s] [with id[s]] %strings% [from plugin %-string%] to %itemtype%",
+                "remove [(custom|1:(mc|minecraft))] recipe[s] [with id[s]] %strings% [from plugin %-string%] from %itemtype%");
     }
 
     private Expression<String> recipes;
@@ -81,7 +82,7 @@ public class EffKnowledgeBook extends Effect {
             else if (plugin != null)
                 key = new NamespacedKey(plugin, recipe);
             else
-                key = RecipeUtil.getKey(recipe);
+                key = Util.getNamespacedKey(recipe, false);
 
             if (add)
                 allRecipes.add(key);

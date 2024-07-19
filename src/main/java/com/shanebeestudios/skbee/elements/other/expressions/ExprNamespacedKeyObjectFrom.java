@@ -13,53 +13,79 @@ import ch.njol.skript.lang.SkriptParser.ParseResult;
 import ch.njol.skript.lang.util.SimpleExpression;
 import ch.njol.util.Kleenean;
 import com.shanebeestudios.skbee.api.util.ObjectConverter;
+import com.shanebeestudios.skbee.api.util.Util;
 import org.bukkit.NamespacedKey;
 import org.bukkit.event.Event;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 
-@Name("Object from NamespacedKey")
+@Name("NamespacedKey - Object From")
 @Description({"Get an object from a namespaced key.",
-        "This may come in handy in an instance you have a string version that doesn't match Skript and can't be parsed.",
-        "\nCurrently supported types: attribute type, biome, enchantment, entity type, item type, potion effect type, statistic."})
+    "This may come in handy in an instance you have a string version that doesn't match Skript and can't be parsed.",
+    "Also supports some custom objects such as custom Enchantments in Minecraft 1.21+",
+    "Currently supported types: attribute, biome, damage type, enchantment, entity type, game event, item type,",
+    "particle, potion effect type, statistic, world."})
 @Examples({"set {_n} to mc key from \"minecraft:zombie\"",
-        "set {_e} to entity type from key {_n}"})
+    "set {_e} to entity type from key {_n}",
+    "set {_e} to entity type from key \"armadillo\"",
+    "set {_e} to entity type from key \"minecraft:breeze\"",
+    "spawn 1 of {_e} above target block",
+    "",
+    "set {_i} to itemtype from key \"minecraft:stone_sword\"",
+    "give player 1 of {_i}",
+    "",
+    "set {_e} to enchantment from key \"minecraft:breach\"",
+    "set {_e} to enchantment from key \"custom:my_custom_enchant\"",
+    "set enchantment level of {_e} of player's tool to 3",
+    "set {_e::*} to enchantments from keys \"minecraft:sharpness\" and \"bloop:shiver\""})
 @Since("2.17.0")
 public class ExprNamespacedKeyObjectFrom extends SimpleExpression<Object> {
 
     static {
         Skript.registerExpression(ExprNamespacedKeyObjectFrom.class, Object.class, ExpressionType.COMBINED,
-                "%*classinfo% from key[s] %namespacedkeys%");
+            "%*classinfo% from key[s] %namespacedkeys/strings%");
     }
 
     private Literal<ClassInfo<?>> classInfo;
-    private Expression<NamespacedKey> namespacedKey;
+    private Expression<?> namespacedKey;
+    private ObjectConverter<?> objectConverter;
 
     @SuppressWarnings({"NullableProblems", "unchecked"})
     @Override
     public boolean init(Expression<?>[] exprs, int matchedPattern, Kleenean isDelayed, ParseResult parseResult) {
         this.classInfo = (Literal<ClassInfo<?>>) exprs[0];
-        this.namespacedKey = (Expression<NamespacedKey>) exprs[1];
+        this.namespacedKey = exprs[1];
+        this.objectConverter = ObjectConverter.getFromClass(this.classInfo.getSingle().getC());
+        if (this.objectConverter == null) {
+            Skript.error("SkBee does not have a NamespacedKey converter for '" + this.classInfo.toString() + "'");
+            return false;
+        }
         return true;
     }
 
     @SuppressWarnings("NullableProblems")
     @Override
-    protected @Nullable Object[] get(Event event) {
-        ClassInfo<?> classInfo = this.classInfo.getSingle();
-        if (classInfo == null) return null;
-
+    protected Object @Nullable [] get(Event event) {
         List<Object> objects = new ArrayList<>();
 
-        for (NamespacedKey key : this.namespacedKey.getArray(event)) {
-            ObjectConverter<?> converter = ObjectConverter.getFromClass(classInfo.getC());
-            if (converter != null) objects.add(converter.get(key));
+        for (Object object : this.namespacedKey.getArray(event)) {
+            if (object instanceof NamespacedKey key) {
+                objects.add(this.objectConverter.get(key));
+            } else if (object instanceof String string) {
+                NamespacedKey key = Util.getNamespacedKey(string, false);
+                objects.add(this.objectConverter.get(key));
+            }
         }
-
-        return objects.toArray(new Object[0]);
+        // Prevent ClassCastException (taken from Skript's parsed as expression)
+        Object[] objectArray = (Object[]) Array.newInstance(this.classInfo.getSingle().getC(), objects.size());
+        for (int i = 0; i < objectArray.length; i++) {
+            objectArray[i] = objects.get(i);
+        }
+        return objectArray;
     }
 
     @Override
@@ -73,7 +99,7 @@ public class ExprNamespacedKeyObjectFrom extends SimpleExpression<Object> {
     }
 
     @Override
-    public @NotNull String toString(@Nullable Event e, boolean d) {
+    public @NotNull String toString(Event e, boolean d) {
         return this.classInfo.toString(e, d) + " from key " + this.namespacedKey.toString(e, d);
     }
 

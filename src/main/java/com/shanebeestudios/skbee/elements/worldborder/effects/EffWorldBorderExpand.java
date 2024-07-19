@@ -12,8 +12,8 @@ import ch.njol.skript.util.Timespan;
 import ch.njol.util.Kleenean;
 import org.bukkit.WorldBorder;
 import org.bukkit.event.Event;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @Name("WorldBorder - Expand/Shrink")
 @Description({"Expand or shrink a world border.",
@@ -27,8 +27,8 @@ public class EffWorldBorderExpand extends Effect {
 
     static {
         Skript.registerEffect(EffWorldBorderExpand.class,
-                "(expand|1¦shrink) %worldborders% by %number% [in %-timespan%]",
-                "(expand|1¦shrink) %worldborders% to %number% [in %-timespan%]");
+                "(expand|1:shrink) %worldborders% by %number% [in %-timespan%]",
+                "(expand|1:shrink) %worldborders% to %number% [in %-timespan%]");
     }
 
     private boolean expand;
@@ -57,7 +57,7 @@ public class EffWorldBorderExpand extends Effect {
         long speed = 0;
         if (this.timeSpan != null) {
             Timespan timeSpan = this.timeSpan.getSingle(event);
-            if (timeSpan != null) speed = timeSpan.getTicks_i() / 20;
+            if (timeSpan != null) speed = timeSpan.getTicks() / 20;
         }
 
         int size = sizeNum.intValue();

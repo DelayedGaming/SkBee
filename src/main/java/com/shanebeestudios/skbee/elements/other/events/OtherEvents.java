@@ -7,17 +7,22 @@ import ch.njol.skript.registrations.EventValues;
 import ch.njol.skript.util.BlockStateBlock;
 import ch.njol.skript.util.Getter;
 import ch.njol.skript.util.Timespan;
+import ch.njol.skript.util.slot.Slot;
+import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import com.shanebeestudios.skbee.api.event.EntityBlockInteractEvent;
+import com.shanebeestudios.skbee.api.util.Util;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.Spellcaster;
+import org.bukkit.event.Event;
 import org.bukkit.event.block.BellRingEvent;
 import org.bukkit.event.block.BlockDamageAbortEvent;
 import org.bukkit.event.block.BlockDropItemEvent;
@@ -27,28 +32,30 @@ import org.bukkit.event.block.MoistureChangeEvent;
 import org.bukkit.event.entity.EntityAirChangeEvent;
 import org.bukkit.event.entity.EntityBreedEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
+import org.bukkit.event.entity.EntityRemoveEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.EntitySpellCastEvent;
 import org.bukkit.event.entity.EntityTeleportEvent;
-import org.bukkit.event.entity.EntityTransformEvent;
-import org.bukkit.event.entity.EntityTransformEvent.TransformReason;
+import org.bukkit.event.entity.EntityUnleashEvent;
+import org.bukkit.event.entity.PlayerLeashEntityEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.entity.SpawnerSpawnEvent;
-import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
-import org.bukkit.event.player.PlayerCommandSendEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerShearEntityEvent;
-import org.bukkit.inventory.Inventory;
+import org.bukkit.event.player.PlayerSpawnChangeEvent;
+import org.bukkit.event.player.PlayerUnleashEntityEvent;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-@SuppressWarnings("unused")
-public class OtherEvents {
+import java.util.Locale;
+
+@SuppressWarnings({"unused", "removal"})
+public class OtherEvents extends SimpleEvent {
 
     static {
-        Skript.registerEvent("Block Physical Interact Event", SimpleEvent.class, EntityBlockInteractEvent.class,
+        Skript.registerEvent("Block Physical Interact Event", OtherEvents.class, EntityBlockInteractEvent.class,
                         "block (interact|trample)")
                 .description("Called when an entity physically interacts with a block, for example,",
                         " entities trampling farmland and villagers opening doors.")
@@ -64,7 +71,9 @@ public class OtherEvents {
                 return event.getBlock();
             }
         }, 0);
-        Skript.registerEvent("Anvil Prepare Event", SimpleEvent.class, PrepareAnvilEvent.class, "[skbee] anvil prepare")
+
+        // Prepare Anvil Event
+        Skript.registerEvent("Anvil Prepare Event", OtherEvents.class, PrepareAnvilEvent.class, "[skbee] anvil prepare")
                 .description("Called when a player attempts to combine 2 items in an anvil.",
                         "'event-slot' represents the result slot, can be used to get or set.")
                 .examples("on anvil prepare:",
@@ -78,6 +87,48 @@ public class OtherEvents {
                         "\t\t\t\tset repair cost of event-inventory to 30")
                 .since("1.11.0");
 
+        EventValues.registerEventValue(PrepareAnvilEvent.class, Slot.class, new Getter<>() {
+            @Override
+            public Slot get(PrepareAnvilEvent event) {
+                return new Slot() {
+                    final ItemStack result = event.getResult();
+
+                    @Nullable
+                    @Override
+                    public ItemStack getItem() {
+                        return result;
+                    }
+
+                    @Override
+                    public void setItem(@Nullable ItemStack item) {
+                        event.setResult(item);
+                    }
+
+                    @Override
+                    public int getAmount() {
+                        if (result != null) return result.getAmount();
+                        return 0;
+                    }
+
+                    @Override
+                    public void setAmount(int amount) {
+                        if (result != null) result.setAmount(amount);
+                    }
+
+                    @Override
+                    public boolean isSameSlot(@NotNull Slot o) {
+                        ItemStack item = o.getItem();
+                        return item != null && item.isSimilar(result);
+                    }
+
+                    @Override
+                    public @NotNull String toString(@Nullable Event e, boolean debug) {
+                        return "anvil inventory result slot";
+                    }
+                };
+            }
+        }, 0);
+
         EventValues.registerEventValue(PrepareAnvilEvent.class, Player.class, new Getter<>() {
             @Override
             public Player get(PrepareAnvilEvent event) {
@@ -86,13 +137,13 @@ public class OtherEvents {
         }, 0);
 
         // Player shear entity event
-        Skript.registerEvent("Shear Entity", SimpleEvent.class, PlayerShearEntityEvent.class, "[player] shear entity")
+        Skript.registerEvent("Shear Entity", OtherEvents.class, PlayerShearEntityEvent.class, "[player] shear entity")
                 .description("Called when a player shears an entity. Requires Minecraft 1.9.4+")
                 .examples("on player shear entity:")
                 .since("1.8.0");
 
         // Entity Breed Event
-        Skript.registerEvent("Entity Breed", SimpleEvent.class, EntityBreedEvent.class,
+        Skript.registerEvent("Entity Breed", OtherEvents.class, EntityBreedEvent.class,
                         "entity breed")
                 .description("Called when one Entity breeds with another Entity.")
                 .examples("on entity breed:", "\nif breeding mother is a sheep:",
@@ -128,83 +179,8 @@ public class OtherEvents {
             }
         }, 0);
 
-        // Inventory Move Item Event
-        Skript.registerEvent("Inventory Move Item", SimpleEvent.class, InventoryMoveItemEvent.class,
-                        "inventory move item")
-                .description("Called when some entity or block (e.g. hopper) tries to move items directly from one inventory to another.",
-                        "\nNOTE: This has nothing to do with a player's inventory!!!",
-                        "\nWhen this event is called, the initiator may already have removed the item from the source inventory and is ready to move it into the destination inventory.",
-                        "\nIf this event is cancelled, the items will be returned to the source inventory, if needed.",
-                        "\nIf this event is not cancelled, the initiator will try to put the ItemStack into the destination inventory.",
-                        "If this is not possible and the ItemStack has not been modified, the source inventory slot will be restored to its former state. Otherwise any additional items will be discarded.",
-                        "\nevent-inventory = Inventory that initiated the transfer.",
-                        "\npast event-inventory = Inventory that the ItemStack is being taken from.",
-                        "\nfuture event-inventory = Inventory that the ItemStack is being put into.")
-                .examples("on inventory move item:",
-                        "\tif type of past event-inventory = hopper inventory:",
-                        "\t\tcancel event")
-                .since("2.5.2");
-
-        EventValues.registerEventValue(InventoryMoveItemEvent.class, Inventory.class, new Getter<>() {
-            @Override
-            public @NotNull Inventory get(InventoryMoveItemEvent event) {
-                return event.getInitiator();
-            }
-        }, 0);
-
-        EventValues.registerEventValue(InventoryMoveItemEvent.class, Inventory.class, new Getter<>() {
-            @Override
-            public @NotNull Inventory get(InventoryMoveItemEvent event) {
-                return event.getSource();
-            }
-        }, -1);
-
-        EventValues.registerEventValue(InventoryMoveItemEvent.class, Inventory.class, new Getter<>() {
-            @Override
-            public @NotNull Inventory get(InventoryMoveItemEvent event) {
-                return event.getDestination();
-            }
-        }, 1);
-
-        EventValues.registerEventValue(InventoryMoveItemEvent.class, ItemStack.class, new Getter<>() {
-            @Override
-            public @NotNull ItemStack get(InventoryMoveItemEvent event) {
-                return event.getItem();
-            }
-        }, 0);
-
-        // Entity Transform Event
-        Skript.registerEvent("Entity Transform", SimpleEvent.class, EntityTransformEvent.class,
-                        "entity transform")
-                .description("Called when an entity is about to be replaced by another entity.",
-                        "Examples include a villager struck by lightning turning into a witch,",
-                        "zombie drowning and becoming a drowned,",
-                        "slime splitting into other slimes.",
-                        "\nevent-entity = entity that is going to transform",
-                        "\nfuture event-entity = entity after transformation (only returns one entity)",
-                        "\nevent-transformreason = reason for the transformation",
-                        "\ntransformed entit(y|ies) = entity or entities after transformation (can be multiple entities)")
-                .examples("on entity transform:",
-                        "\tif event-entity is a villager:",
-                        "\t\tcancel event")
-                .since("2.5.3");
-
-        EventValues.registerEventValue(EntityTransformEvent.class, Entity.class, new Getter<>() {
-            @Override
-            public Entity get(EntityTransformEvent event) {
-                return event.getTransformedEntity();
-            }
-        }, 1);
-
-        EventValues.registerEventValue(EntityTransformEvent.class, TransformReason.class, new Getter<>() {
-            @Override
-            public TransformReason get(EntityTransformEvent event) {
-                return event.getTransformReason();
-            }
-        }, 0);
-
         // Entity Change Block Event
-        Skript.registerEvent("Entity Change Block", SimpleEvent.class, EntityChangeBlockEvent.class,
+        Skript.registerEvent("Entity Change Block", OtherEvents.class, EntityChangeBlockEvent.class,
                         "entity change block")
                 .description("Called when any Entity changes a block and a more specific event is not available.",
                         "Skript does partially have this event, but this version of it opens up ALL possibilities with this event.",
@@ -224,22 +200,21 @@ public class OtherEvents {
             }
         }, 0);
 
-        // Player Command Send Event
-        Skript.registerEvent("Player Command Send", SimpleEvent.class, PlayerCommandSendEvent.class,
-                        "player command send")
-                .description("This event is called when the list of available server commands is sent to the player.",
-                        "Commands may be removed from display using this event, but implementations are not required to securely",
-                        "remove all traces of the command. If secure removal of commands is required,",
-                        "then the command should be assigned a permission which is not granted to the player.")
-                .examples("on player command send:",
-                        "\tremove \"ver\" and \"version\" from player command map")
-                .since("2.5.3");
-
         // Block Drop Item Event
-        Skript.registerEvent("Block Drop Item", SimpleEvent.class, BlockDropItemEvent.class,
+        Skript.registerEvent("Block Drop Item", OtherEvents.class, BlockDropItemEvent.class,
                         "block drop item")
-                .description("This event is called if a block broken by a player drops an item. ")
-                .examples("")
+                .description("This event is called if a block broken by a player drops an item.",
+                        "`event-player` = Player who broke the block.",
+                        "`event-entities` = Item entities which were dropped (may include drops of attached blocks, like a torch).",
+                        "`past event-block` = The block that was broken (This event is called after the block actually breaks).",
+                        "`event-block` = Current state of block after broken (Probably will just be air).")
+                .examples("on block drop item:",
+                        "\tif past event-block is any ore:",
+                        "\t\tteleport event-entities to player",
+                        "\t\tset {_data} to blockdata of past event-block",
+                        "\t\tset event-block to bedrock",
+                        "\t\twait 2 seconds",
+                        "\t\tset event-block to {_data}")
                 .since("2.6.0");
 
         EventValues.registerEventValue(BlockDropItemEvent.class, Player.class, new Getter<>() {
@@ -249,9 +224,30 @@ public class OtherEvents {
             }
         }, 0);
 
+        EventValues.registerEventValue(BlockDropItemEvent.class, Block.class, new Getter<>() {
+            @Override
+            public Block get(BlockDropItemEvent event) {
+                return event.getBlock();
+            }
+        }, EventValues.TIME_NOW);
+
+        EventValues.registerEventValue(BlockDropItemEvent.class, Block.class, new Getter<>() {
+            @Override
+            public Block get(BlockDropItemEvent event) {
+                return new BlockStateBlock(event.getBlockState());
+            }
+        }, EventValues.TIME_PAST);
+
+        EventValues.registerEventValue(BlockDropItemEvent.class, Item[].class, new Getter<>() {
+            @Override
+            public Item @Nullable [] get(BlockDropItemEvent event) {
+                return event.getItems().toArray(new Item[0]);
+            }
+        }, EventValues.TIME_NOW);
+
         // Block Damage Abort Event
         if (Skript.classExists("org.bukkit.event.block.BlockDamageAbortEvent")) {
-            Skript.registerEvent("Block Damage Abort", SimpleEvent.class, BlockDamageAbortEvent.class,
+            Skript.registerEvent("Block Damage Abort", OtherEvents.class, BlockDamageAbortEvent.class,
                             "block damage abort")
                     .description("Called when a player stops damaging a Block. Requires MC 1.18.x+")
                     .examples("on block damage abort:",
@@ -266,7 +262,7 @@ public class OtherEvents {
             }, EventValues.TIME_NOW);
         }
 
-        Skript.registerEvent("Entity Air Change", SimpleEvent.class, EntityAirChangeEvent.class,
+        Skript.registerEvent("Entity Air Change", OtherEvents.class, EntityAirChangeEvent.class,
                         "[entity] air change")
                 .description("Called when the amount of air an entity has remaining changes.",
                         "\n`event-number` = The amount of air the entity will have left (measured in ticks).",
@@ -293,7 +289,7 @@ public class OtherEvents {
                 if (event.getEntity() instanceof LivingEntity livingEntity) {
                     ticks = livingEntity.getRemainingAir();
                 }
-                return Timespan.fromTicks_i(ticks);
+                return Timespan.fromTicks(ticks);
             }
         }, EventValues.TIME_PAST);
 
@@ -307,7 +303,7 @@ public class OtherEvents {
         EventValues.registerEventValue(EntityAirChangeEvent.class, Timespan.class, new Getter<>() {
             @Override
             public Timespan get(EntityAirChangeEvent event) {
-                return Timespan.fromTicks_i(event.getAmount());
+                return Timespan.fromTicks(event.getAmount());
             }
         }, EventValues.TIME_NOW);
 
@@ -345,7 +341,7 @@ public class OtherEvents {
         }, 0);
 
         // Entity Spell Cast Event
-        Skript.registerEvent("Spell Cast", SimpleEvent.class, EntitySpellCastEvent.class,
+        Skript.registerEvent("Spell Cast", OtherEvents.class, EntitySpellCastEvent.class,
                         "[entity] spell cast")
                 .description("Called when a Spellcaster casts a spell.")
                 .examples("on spell cast:",
@@ -362,7 +358,7 @@ public class OtherEvents {
         }, 0);
 
         // Entity Shoot Bow Event
-        Skript.registerEvent("Entity Shoot Bow", SimpleEvent.class, EntityShootBowEvent.class,
+        Skript.registerEvent("Entity Shoot Bow", OtherEvents.class, EntityShootBowEvent.class,
                         "entity shoot bow")
                 .description("Called when a LivingEntity shoots a bow firing an arrow.")
                 .examples("on entity shoot bow:",
@@ -379,8 +375,8 @@ public class OtherEvents {
         }, EventValues.TIME_NOW);
 
         // Bell Ring Event
-        if (Skript.classExists("org.bukkit.event.block.BellRingEvent")) {
-            Skript.registerEvent("Bell Ring", SimpleEvent.class, BellRingEvent.class, "bell ring")
+        if (!Util.IS_RUNNING_SKRIPT_2_9 && Skript.classExists("org.bukkit.event.block.BellRingEvent")) {
+            Skript.registerEvent("Bell Ring", OtherEvents.class, BellRingEvent.class, "bell ring")
                     .description("Called when a bell is being rung. Requires Minecraft 1.19.4+")
                     .examples("on bell ring:",
                             "\tkill all mobs in radius 5 of event-block")
@@ -402,7 +398,7 @@ public class OtherEvents {
         }
 
         // Entity Teleport Event
-        Skript.registerEvent("Entity Teleport", SimpleEvent.class, EntityTeleportEvent.class, "entity teleport")
+        Skript.registerEvent("Entity Teleport", OtherEvents.class, EntityTeleportEvent.class, "entity teleport")
                 .description("Thrown when a non-player entity is teleported from one location to another.",
                         "This may be as a result of natural causes (Enderman, Shulker), pathfinding (Wolf), or commands (/teleport).",
                         "\n`past event-location` = Location teleported from.",
@@ -427,7 +423,7 @@ public class OtherEvents {
         }, EventValues.TIME_NOW);
 
         // Moisture Change Event
-        Skript.registerEvent("Moisture Change", SimpleEvent.class, MoistureChangeEvent.class, "moisture change")
+        Skript.registerEvent("Moisture Change", OtherEvents.class, MoistureChangeEvent.class, "moisture change")
                 .description("Called when the moisture level of a farmland block changes.")
                 .examples("on moisture change:",
                         "\tcancel event",
@@ -442,7 +438,7 @@ public class OtherEvents {
         }, EventValues.TIME_FUTURE);
 
         // Block Explode Event
-        Skript.registerEvent("Block Explode", SimpleEvent.class, BlockExplodeEvent.class, "block explode")
+        Skript.registerEvent("Block Explode", OtherEvents.class, BlockExplodeEvent.class, "block explode")
                 .description("Called when a block explodes interacting with blocks.",
                         "The event isn't called if the gamerule MOB_GRIEFING is disabled as no block interaction will occur.",
                         "The Block returned by this event is not necessarily the block that caused the explosion,",
@@ -450,7 +446,7 @@ public class OtherEvents {
                         "\n`past event-itemtype` will return the type of the block which exploded.",
                         "\n`past event-blockdata` will return the blockdata of the block which exploded.")
                 .examples("")
-                .since("INSERT VERSION");
+                .since("3.2.0");
 
         EventValues.registerEventValue(BlockExplodeEvent.class, BlockData.class, new Getter<>() {
             @Override
@@ -483,6 +479,129 @@ public class OtherEvents {
                 return new ItemType(explodedBlockState.getType());
             }
         }, EventValues.TIME_PAST);
+
+        // Leash Events
+        Skript.registerEvent("Player Leash", OtherEvents.class, PlayerLeashEntityEvent.class, "player leash entity")
+                .description("Called immediately prior to a creature being leashed by a player.",
+                        "\n`event-entity` = Entity which got leashed.",
+                        "\n`future event-entity` = The entity the leashed entity is leashed to (could be a player or leash hitch on a fence).",
+                        "\n`event-player` = Player whom leashed the entity.")
+                .examples("on player leash entity:",
+                        "\tkill event-entity")
+                .since("3.2.0");
+
+        EventValues.registerEventValue(PlayerLeashEntityEvent.class, Entity.class, new Getter<>() {
+            @Override
+            public Entity get(PlayerLeashEntityEvent event) {
+                return event.getEntity();
+            }
+        }, EventValues.TIME_NOW);
+
+        EventValues.registerEventValue(PlayerLeashEntityEvent.class, Entity.class, new Getter<>() {
+            @Override
+            public Entity get(PlayerLeashEntityEvent event) {
+                return event.getLeashHolder();
+            }
+        }, EventValues.TIME_FUTURE);
+
+        EventValues.registerEventValue(PlayerLeashEntityEvent.class, Player.class, new Getter<>() {
+            @Override
+            public Player get(PlayerLeashEntityEvent event) {
+                return event.getPlayer();
+            }
+        }, EventValues.TIME_NOW);
+
+        Skript.registerEvent("Entity Unleash", OtherEvents.class, EntityUnleashEvent.class, "entity unleash")
+                .description("Called immediately prior to an entity being unleashed.",
+                        "Cancelling this event when either the leashed entity dies, the entity changes dimension, or",
+                        "the client has disconnected the leash will have no effect.",
+                        "\n`event-string` = The reason for unleashing.",
+                        "Options are \"distance\" (When the entity's leashholder is more than 10 blocks away),",
+                        "\"holder_gone\" (When the entity's leashholder has died or logged out, and so is unleashed),",
+                        "\"player_unleash\" (When the entity's leashholder attempts to unleash it), \"unknown\"")
+                .examples("on entity unleash:",
+                        "\tif event-entity is a cow:",
+                        "\t\tif event-string = \"distance\":",
+                        "\t\t\tcancel event")
+                .since("3.2.0");
+
+        EventValues.registerEventValue(EntityUnleashEvent.class, String.class, new Getter<>() {
+            @Override
+            public String get(EntityUnleashEvent event) {
+                return event.getReason().name().toLowerCase(Locale.ROOT);
+            }
+        }, EventValues.TIME_NOW);
+
+        EventValues.registerEventValue(EntityUnleashEvent.class, Player.class, new Getter<>() {
+            @Override
+            public @Nullable Player get(EntityUnleashEvent event) {
+                if (event instanceof PlayerUnleashEntityEvent playerUnleashEntityEvent)
+                    return playerUnleashEntityEvent.getPlayer();
+                return null;
+            }
+        }, EventValues.TIME_NOW);
+
+        // Entity Remove Event
+        Class<? extends Event> eventClass = null;
+        boolean bukkitRemoveEvent = false;
+        if (Skript.classExists("org.bukkit.event.entity.EntityRemoveEvent")) {
+            eventClass = EntityRemoveEvent.class;
+            bukkitRemoveEvent = true;
+        } else if (Skript.classExists("com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent")) {
+            eventClass = EntityRemoveFromWorldEvent.class;
+        }
+        if (eventClass != null) {
+            Skript.registerEvent("Entity Remove from World", OtherEvents.class, eventClass,
+                            "entity remove[d] [from world]")
+                    .description("Fired any time an entity is being removed from a world for any reason.",
+                            "Requires a PaperMC server or Spigot 1.20.4+ server.",
+                            "`event-entityremovecause` = The reason the entity was removed (requires MC 1.20.4+).")
+                    .examples("on entity removed from world:",
+                            "\tbroadcast \"a lonely %event-entity% left the world.\"")
+                    .since("2.7.2");
+
+            if (bukkitRemoveEvent) {
+                EventValues.registerEventValue(EntityRemoveEvent.class, EntityRemoveEvent.Cause.class, new Getter<>() {
+                    @Override
+                    public EntityRemoveEvent.Cause get(EntityRemoveEvent event) {
+                        return event.getCause();
+                    }
+                }, EventValues.TIME_NOW);
+            }
+        }
+
+        // Player Spawn Change Event
+        if (Skript.classExists("org.bukkit.event.player.PlayerSpawnChangeEvent")) {
+            Skript.registerEvent("Player Spawn Change", OtherEvents.class, PlayerSpawnChangeEvent.class, "player spawn change")
+                    .description("This event is fired when the spawn point of the player is changed.")
+                    .examples("on player spawn change:",
+                            "\tif event-playerspawnchangereason = bed or respawn_anchor:",
+                            "\t\tcancel event",
+                            "\t\tsend \"Nope... sorry!\"")
+                    .since("3.4.0");
+
+            EventValues.registerEventValue(PlayerSpawnChangeEvent.class, PlayerSpawnChangeEvent.Cause.class, new Getter<>() {
+                @Override
+                public PlayerSpawnChangeEvent.Cause get(PlayerSpawnChangeEvent event) {
+                    return event.getCause();
+                }
+            }, EventValues.TIME_NOW);
+
+            EventValues.registerEventValue(PlayerSpawnChangeEvent.class, Location.class, new Getter<>() {
+                @SuppressWarnings("deprecation")
+                @Override
+                public @Nullable Location get(PlayerSpawnChangeEvent event) {
+                    return event.getPlayer().getBedSpawnLocation();
+                }
+            }, EventValues.TIME_NOW);
+
+            EventValues.registerEventValue(PlayerSpawnChangeEvent.class, Location.class, new Getter<>() {
+                @Override
+                public @Nullable Location get(PlayerSpawnChangeEvent event) {
+                    return event.getNewSpawn();
+                }
+            }, EventValues.TIME_FUTURE);
+        }
     }
 
 }

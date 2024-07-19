@@ -47,7 +47,7 @@ public class ExprFishHookWaitTime extends SimplePropertyExpression<Entity, Times
     public @Nullable Timespan convert(Entity entity) {
         if (entity instanceof FishHook fishHook) {
             int wait = this.max ? fishHook.getMaxWaitTime() : fishHook.getMinWaitTime();
-            return Timespan.fromTicks_i(wait);
+            return Timespan.fromTicks(wait);
         }
         return null;
     }
@@ -64,7 +64,7 @@ public class ExprFishHookWaitTime extends SimplePropertyExpression<Entity, Times
     @SuppressWarnings({"NullableProblems", "ConstantValue"})
     @Override
     public void change(Event event, @Nullable Object[] delta, ChangeMode mode) {
-        int changeValue = delta != null && delta[0] != null ? (int) ((Timespan) delta[0]).getTicks_i() : 0;
+        int changeValue = delta != null && delta[0] != null ? (int) ((Timespan) delta[0]).getTicks() : 0;
         for (Entity entity : getExpr().getArray(event)) {
             if (entity instanceof FishHook fishHook) {
                 int value = this.max ? fishHook.getMaxWaitTime() : fishHook.getMinWaitTime();
@@ -74,14 +74,13 @@ public class ExprFishHookWaitTime extends SimplePropertyExpression<Entity, Times
                     case RESET -> value = this.max ? 600 : 100;
                     case REMOVE -> value -= changeValue;
                 }
+                if (value < 0) return;
                 if (this.max) {
-                    if (value >= 0 && value >= fishHook.getMinWaitTime()) {
-                        fishHook.setMaxWaitTime(value);
-                    }
+                    if (value < fishHook.getMinWaitTime()) fishHook.setMinWaitTime(value);
+                    fishHook.setMaxWaitTime(value);
                 } else {
-                    if (value >= 0 && value <= fishHook.getMaxWaitTime()) {
-                        fishHook.setMinWaitTime(value);
-                    }
+                    if (value > fishHook.getMaxWaitTime()) fishHook.setMaxWaitTime(value);
+                    fishHook.setMinWaitTime(value);
                 }
             }
         }

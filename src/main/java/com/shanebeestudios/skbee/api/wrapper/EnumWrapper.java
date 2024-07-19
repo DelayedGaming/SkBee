@@ -19,7 +19,7 @@ import java.util.Locale;
  * Wrapper class for wrapping Enums to be used in Skript
  * <p>
  * This class is copied from Skript, with the language node stripped out and other changes
- * <a href="https://github.com/SkriptDev/Skript/blob/master/src/main/java/ch/njol/skript/util/EnumUtils.java">EnumUtils</a>
+ * <a href="https://github.com/SkriptLang/Skript/blob/master/src/main/java/ch/njol/skript/util/EnumUtils.java">EnumUtils</a>
  * </p>
  *
  * @author Peter Güttinger (original)
@@ -119,6 +119,17 @@ public final class EnumWrapper<E extends Enum<E>> {
      */
     public ClassInfo<E> getClassInfo(String codeName) {
         return new ClassInfo<>(this.enumClass, codeName).usage(getAllNames()).parser(new EnumParser<>(this));
+    }
+
+    /**
+     * Create ClassInfo with default praser and usage
+     * <p>If using `.usage()` use this method to prevent double call/assertion error</p>
+     *
+     * @param codeName Name for class info
+     * @return ClassInfo with default praser and usage
+     */
+    public ClassInfo<E> getClassInfoWithoutUsage(String codeName) {
+        return new ClassInfo<>(this.enumClass, codeName).parser(new EnumParser<>(this));
     }
 
     private void registerComparator(Class<E> c) {

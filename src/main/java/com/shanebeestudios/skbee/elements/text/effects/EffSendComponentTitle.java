@@ -16,7 +16,7 @@ import org.bukkit.event.Event;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.NotNull;
 
-@Name("Text Component - Send Title")
+@Name("TextComponent - Send Title")
 @Description({"Send titles containing components. Supports strings as well.",
         "If you are using variables and the title won't send, make sure to add `component`."})
 @Examples({"send title mini message from \"<rainbow>OOO RAINBOW TITLE\"",
@@ -61,19 +61,19 @@ public class EffSendComponentTitle extends Effect {
         if (this.stay != null) {
             Timespan staySingle = this.stay.getSingle(event);
             if (staySingle != null) {
-                stay = staySingle.getTicks_i();
+                stay = staySingle.getTicks();
             }
         }
         if (this.fadeIn != null) {
             Timespan fadeInSingle = this.fadeIn.getSingle(event);
             if (fadeInSingle != null) {
-                fadeIn = fadeInSingle.getTicks_i();
+                fadeIn = fadeInSingle.getTicks();
             }
         }
         if (this.fadeOut != null) {
             Timespan fadeOutSingle = this.fadeOut.getSingle(event);
             if (fadeOutSingle != null) {
-                fadeOut = fadeOutSingle.getTicks_i();
+                fadeOut = fadeOutSingle.getTicks();
             }
         }
         ComponentWrapper.sendTitle(players, title, subtitle, stay, fadeIn, fadeOut);

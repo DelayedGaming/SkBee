@@ -24,7 +24,7 @@ public class BoundConfig {
     private final SkBee plugin;
     private File boundFile;
     private FileConfiguration boundConfig;
-    private final Map<World, Map<String, Bound>> worldBoundMap = new HashMap<>();
+    private final Map<String, Bound> boundsMap = new HashMap<>();
 
     public BoundConfig(SkBee plugin) {
         this.plugin = plugin;
@@ -52,28 +52,25 @@ public class BoundConfig {
         if (section == null) return;
         for (String key : section.getKeys(true)) {
             Object bound = section.get(key);
-            if (bound instanceof Bound b) {
-                Map<String, Bound> boundMap = getBoundsMap(b.getWorld());
-                boundMap.put(b.getId(), b);
-                worldBoundMap.put(b.getWorld(), boundMap);
+            if (bound instanceof Bound) {
+                boundsMap.put(key, ((Bound) bound));
             }
         }
     }
 
     private void update18Heights() {
         Util.log("Updating bounds:");
-        for (World world : worldBoundMap.keySet()) {
-            for (Bound bound : getBoundsMap(world).values()) {
-                int lesserY = bound.getLesserY();
-                int greaterY = bound.getGreaterY();
-                if (lesserY == 0 && world != null) {
-                    int minHeight = WorldUtils.getMinHeight(world);
-                    int maxHeight = WorldUtils.getMaxHeight(world);
-                    if (greaterY == 255 || greaterY == maxHeight) {
-                        bound.setGreaterY(maxHeight);
-                        bound.setLesserY(minHeight);
-                        Util.log("Updating bound with id '%s'", bound.getId());
-                    }
+        for (Bound bound : boundsMap.values()) {
+            int lesserY = bound.getLesserY();
+            int greaterY = bound.getGreaterY();
+            World world = bound.getWorld();
+            if (lesserY == 0 && world != null) {
+                int minHeight = WorldUtils.getMinHeight(world);
+                int maxHeight = WorldUtils.getMaxHeight(world);
+                if (greaterY == 255 || greaterY == maxHeight) {
+                    bound.setGreaterY(maxHeight);
+                    bound.setLesserY(minHeight);
+                    Util.log("Updating bound with id '%s'", bound.getId());
                 }
             }
         }
@@ -82,11 +79,7 @@ public class BoundConfig {
     }
 
     public void saveBound(Bound bound) {
-        Map<String, Bound> boundMap = worldBoundMap.get(bound.getWorld());
-        if (boundMap == null)
-            boundMap = new HashMap<>();
-        boundMap.put(bound.getId(), bound);
-        worldBoundMap.put(bound.getWorld(), boundMap);
+        boundsMap.put(bound.getId(), bound);
         if (!bound.isTemporary()) {
             boundConfig.set("bounds." + bound.getId(), bound);
             saveConfig();
@@ -94,35 +87,28 @@ public class BoundConfig {
     }
 
     public void removeBound(Bound bound) {
-        getBoundsMap(bound.getWorld()).remove(bound.getId());
+        boundsMap.remove(bound.getId());
         if (!bound.isTemporary()) {
             boundConfig.set("bounds." + bound.getId(), null);
             saveConfig();
         }
     }
 
-    public boolean boundExists(String id, World world) {
-        return getBoundsMap(world).containsKey(id);
+    public boolean boundExists(String id) {
+        return boundsMap.containsKey(id);
     }
 
-    public Collection<Bound> getBoundsFromID(String id) {
-        return worldBoundMap.values().stream()
-                .flatMap(boundMap -> boundMap.values().stream())
-                .filter(bound -> bound.getId().equals(id))
-                .toList();
-    }
-
-    public Bound getBoundFromID(String id, World world) {
-        return getBoundsMap(world).get(id);
+    public Bound getBoundFromID(String id) {
+        if (boundsMap.containsKey(id))
+            return boundsMap.get(id);
+        return null;
     }
 
     public void saveAllBounds() {
-        for (World world : worldBoundMap.keySet()) {
-            for (Bound bound : getBoundsMap(world).values()) {
-                if (bound.isTemporary()) continue;
-                boundConfig.set("bounds." + bound.getId(), bound);
-                getBoundsMap(bound.getWorld()).put(bound.getId(), bound);
-            }
+        for (Bound bound : boundsMap.values()) {
+            if (bound.isTemporary()) continue;
+            boundConfig.set("bounds." + bound.getId(), bound);
+            boundsMap.put(bound.getId(), bound);
         }
         saveConfig();
     }
@@ -135,19 +121,8 @@ public class BoundConfig {
         }
     }
 
-    /**
-     * @param world the world
-     * @return the associated bounds map, otherwise an empty HashMap
-     */
-    public Map<String, Bound> getBoundsMap(World world) {
-        worldBoundMap.computeIfAbsent(world, w -> new HashMap<>());
-        return worldBoundMap.get(world);
-    }
-
     public Collection<Bound> getBounds() {
-        return worldBoundMap.values().stream()
-                .flatMap(boundMap -> boundMap.values().stream())
-                .toList();
+        return boundsMap.values();
     }
 
     public Collection<Bound> getBoundsIn(World world) {
@@ -157,10 +132,7 @@ public class BoundConfig {
     }
 
     public Collection<Bound> getBoundsAt(Location location) {
-        return worldBoundMap.values().stream()
-                .flatMap(boundMap -> boundMap.values().stream())
-                .filter(bound -> bound.isInRegion(location))
-                .toList();
+        return boundsMap.values().stream().filter(bound -> bound.isInRegion(location)).toList();
     }
 
 }

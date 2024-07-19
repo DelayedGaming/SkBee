@@ -24,9 +24,10 @@ public class SkriptTypes {
     public static final Changer<NBTCompound> NBT_COMPOUND_CHANGER = new Changer<>() {
         @Nullable
         @Override
-        public Class<?>[] acceptChange(ChangeMode mode) {
+        public Class<?> @Nullable [] acceptChange(ChangeMode mode) {
             return switch (mode) {
-                case ADD, DELETE -> CollectionUtils.array(NBTCompound.class);
+                case ADD -> CollectionUtils.array(NBTCompound.class);
+                case DELETE, RESET -> CollectionUtils.array();
                 default -> null;
             };
         }
@@ -38,9 +39,10 @@ public class SkriptTypes {
                 for (NBTCompound nbtCompound : what) {
                     nbtCompound.mergeCompound(changer);
                 }
-            } else if (mode == ChangeMode.DELETE) {
+            } else if (mode == ChangeMode.DELETE || mode == ChangeMode.RESET) {
                 for (NBTCompound nbtCompound : what) {
-                    if (nbtCompound instanceof NBTFile nbtFile) {
+                    nbtCompound.clearNBT();
+                    if (nbtCompound instanceof NBTFile nbtFile && mode == ChangeMode.DELETE) {
                         nbtFile.getFile().delete();
                     }
                 }
@@ -52,7 +54,10 @@ public class SkriptTypes {
         Classes.registerClass(new ClassInfo<>(NBTCustomType.class, "nbttype")
                 .user("nbt ?types?")
                 .name("NBT - Tag Type")
-                .description("Represents a type of NBT tag.")
+                .description("Represents a type of NBT tag.",
+                        "You can read more about NBT types:",
+                        "\nMcWiki [**NBT Data Types**](https://minecraft.wiki/w/NBT_format#Data_types)",
+                        "\nSkBee Wiki [**NBT Data Types**](https://github.com/ShaneBeee/SkBee/wiki/NBT-Intro#datatypes-in-nbt)")
                 .usage(NBTCustomType.getNames())
                 .examples("set byte tag \"points\" of {_nbt} to 1",
                         "set compound tag \"tool\" of {_nbt} to nbt compound of player's tool")

@@ -18,7 +18,7 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 
-@Name("Text Component - Format")
+@Name("TextComponent - Format")
 @Description({"Change formatting options of text components. Most of these are pretty straight forward. Insertion means the text ",
         "that will copy to chat when a player shift-clicks the component (Might not be available on all versions). Color supports color ",
         "names as well as RGB color codes via Skript's RGB function (RGB = Minecraft 1.16+) (see examples)."})
@@ -35,11 +35,11 @@ public class ExprComponentFormat extends PropertyExpression<ComponentWrapper, Ob
     static {
         if (Skript.methodExists(ComponentWrapper.class, "setInsertion", String.class)) {
             register(ExprComponentFormat.class, Object.class,
-                    "(color|1¦bold|2¦italic|3¦(obfuscate[d]|magic)|4¦strikethrough|5¦underline[d]|6¦font|7¦insert[ion]) format",
+                    "(color|1:bold|2:italic|3:(obfuscate[d]|magic)|4:strikethrough|5:underline[d]|6:font|7:insert[ion]) format",
                     "textcomponents");
         } else {
             register(ExprComponentFormat.class, Object.class,
-                    "(color|1¦bold|2¦italic|3¦(obfuscate[d]|magic)|4¦strikethrough|5¦underline[d]|6¦font) format",
+                    "(color|1:bold|2:italic|3:(obfuscate[d]|magic)|4:strikethrough|5:underline[d]|6:font) format",
                     "textcomponents");
         }
     }

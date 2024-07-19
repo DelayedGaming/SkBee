@@ -13,8 +13,9 @@ import ch.njol.skript.lang.SkriptParser.ParseResult;
 import ch.njol.skript.util.Timespan;
 import ch.njol.util.Kleenean;
 import com.shanebeestudios.skbee.SkBee;
-import com.shanebeestudios.skbee.config.Config;
 import com.shanebeestudios.skbee.api.recipe.RecipeUtil;
+import com.shanebeestudios.skbee.api.util.Util;
+import com.shanebeestudios.skbee.config.Config;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -49,7 +50,7 @@ public class EffCookingRecipe extends Effect {
 
     static {
         Skript.registerEffect(EffCookingRecipe.class,
-                "register [new] (0¦furnace|1¦(blast furnace|blasting)|2¦smok(er|ing)|3¦campfire) recipe for %itemtype% " +
+                "register [new] (furnace|1:(blast furnace|blasting)|2:smok(er|ing)|3:campfire) recipe for %itemtype% " +
                         "(using|with ingredient) %itemtype/recipechoice% with id %string% [[and ]with exp[erience] %-number%] " +
                         "[[and ]with cook[ ]time %-timespan%] [in group %-string%]");
     }
@@ -109,14 +110,14 @@ public class EffCookingRecipe extends Effect {
             return;
         }
         String group = this.group != null ? this.group.getSingle(event) : "";
-        NamespacedKey key = RecipeUtil.getKey(this.key.getSingle(event));
+        NamespacedKey key = Util.getNamespacedKey(this.key.getSingle(event), false);
         if (key == null) {
             RecipeUtil.error("Current Item: §6'" + toString(event, true) + "'");
             return;
         }
 
         float xp = experience != null ? experience.getSingle(event).floatValue() : 0;
-        int cookTime = this.cookTime != null ? (int) this.cookTime.getSingle(event).getTicks_i() : getDefaultCookTime(recipeType);
+        int cookTime = this.cookTime != null ? (int) this.cookTime.getSingle(event).getTicks() : getDefaultCookTime(recipeType);
 
         // Remove duplicates on script reload
         Bukkit.removeRecipe(key);

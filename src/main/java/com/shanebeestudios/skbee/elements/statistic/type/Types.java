@@ -2,7 +2,8 @@ package com.shanebeestudios.skbee.elements.statistic.type;
 
 import ch.njol.skript.registrations.Classes;
 import ch.njol.util.StringUtils;
-import com.shanebeestudios.skbee.api.wrapper.EnumWrapper;
+import com.shanebeestudios.skbee.api.wrapper.RegistryClassInfo;
+import org.bukkit.Registry;
 import org.bukkit.Statistic;
 import org.bukkit.Statistic.Type;
 
@@ -13,16 +14,16 @@ import java.util.List;
 public class Types {
 
     static {
-        EnumWrapper<Statistic> STATISTICS_ENUM = new EnumWrapper<>(Statistic.class);
-        Classes.registerClass(STATISTICS_ENUM.getClassInfo("statistic")
-                .user("statistics?")
-                .name("Statistic")
-                .description("Represents the different statistics for a player.",
-                        "Some stats require extra data, these are distinguished by their data type within the square brackets.",
-                        "Underscores in stat names are not required, you can use spaces.",
-                        "NOTE: 'play_one_minute' stat's name is misleading, it's actually amount of ticks played.")
-                .usage(getNames())
-                .since("1.17.0"));
+        Classes.registerClass(RegistryClassInfo.create(Registry.STATISTIC, Statistic.class, false, "statistic")
+            .user("statistics?")
+            .name("Statistic")
+            .description("Represents the different statistics for a player.",
+                "Some stats require extra data, these are distinguished by their data type within the square brackets.",
+                "Underscores in stat names are not required, you can use spaces.",
+                "NOTE: 'play_one_minute' stat's name is misleading, it's actually amount of ticks played.",
+                "NOTE: These are auto-generated and may differ between server versions.")
+            .usage(getNames())
+            .since("1.17.0"));
     }
 
     /**
@@ -34,7 +35,7 @@ public class Types {
      */
     private static String getNames() {
         List<String> names = new ArrayList<>();
-        for (Statistic statistic : Statistic.values()) {
+        Registry.STATISTIC.forEach(statistic -> {
             String name = statistic.getKey().getKey();
             Type type = statistic.getType();
 
@@ -44,7 +45,7 @@ public class Types {
                 name = name + " [EntityType]";
             }
             names.add(name);
-        }
+        });
         Collections.sort(names);
         return StringUtils.join(names, ", ");
     }

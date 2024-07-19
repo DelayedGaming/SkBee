@@ -39,7 +39,7 @@ public class ExprTagGet extends SimpleExpression<Tag> {
 
     static {
         Skript.registerExpression(ExprTagGet.class, Tag.class, ExpressionType.COMBINED,
-                "minecraft [(item|1¦block|2¦entity[[ ]type])] tag[s] %strings/namespacedkeys%");
+                "minecraft [(item|1:block|2:entity[[ ]type])] tag[s] %strings/namespacedkeys%");
     }
 
     private int parse;
@@ -62,7 +62,7 @@ public class ExprTagGet extends SimpleExpression<Tag> {
             if (object instanceof NamespacedKey namespacedKey) {
                 keys.add(namespacedKey);
             } else if (object instanceof String string) {
-                NamespacedKey key = Util.getMCNamespacedKey(string, true);
+                NamespacedKey key = Util.getNamespacedKey(string, true);
                 if (key != null) keys.add(key);
             }
         }
