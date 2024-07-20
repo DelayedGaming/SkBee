@@ -154,7 +154,7 @@ public class BoundConfig {
         try {
             boundConfig.save(boundFile);
         } catch (IOException e) {
-            e.printStackTrace();
+            e.printStackTrace(System.err);
         }
     }
 
